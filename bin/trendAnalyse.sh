@@ -59,8 +59,6 @@ Options:
 
 		-h   Show this help.
 		-g   Group.
-		-d InputDataType dragen|projects|RNAprojects|ogm|darwin|openarray|rawdata|all
-		Providing InputDataType to run only a specific data type or "all" to run all types.
 		-l   Log level.
 		Must be one of TRACE, DEBUG, INFO (default), WARN, ERROR or FATAL.
 
@@ -133,43 +131,44 @@ function markProcessingFailed() {
     echo "${job_control_line}" >> "${logs_dir}/process.${datatype}.trendanalysis.failed"
 }
 
-# Generic procesor per handler/datatype
+# Generic data processor for each datahandler/dataType
 function processData() {
-  local datatype="${1}"
-  local data_handler="${2}"
-  local basedir="${3}"
+	local datatype="${1}"
+	local data_handler="${2}"
+	local basedir="${3}"
 
-  log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Verwerken van type '$type' gestart"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '$type' started..."
+	# Get all runDirs in form the provided $basedir
+	readarray -t runs < <(find "${basedir}" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | xargs -r basename -a)
 
-  readarray -t runs < <(find "${basedir}" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | xargs -r basename -a)
+	# If exporting a full dataset and no rundirs are provided,
+	# use basename + date as the rundir. For example: ogm and darwin dataType.
+	if [ "${#runs[@]}" -eq 0 ]; then
+		runs=( "$(basename "${basedir}").${today}" )
+	fi
 
-  # Als er geen runs zijn gevonden, gebruik de basename van basedir, voor Darwin bijv.
-  if [ "${#runs[@]}" -eq 0 ]; then
-    runs=( "$(basename "${basedir}").${today}" )
-  fi
-
-  for run in "${runs[@]}"; do
-    local job_control_line="${run}.trendanalysis.${data_handler}"
-    
-    if isAlreadyProcessed "${datatype}" "${job_control_line}"; then
-      log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Verwerken van type '${type}' project '${run}' al verwerkt."
-      continue
-    fi
-
-    markProcessingStarted "${datatype}" "${job_control_line}"
-	# 
-    if "${data_handler}" "${run}" "${basedir}"; then
-         markProcessingFinished "${datatype}" "${job_control_line}"
-    else
-         markProcessingFailed "${datatype}" "${job_control_line}"
-    fi
-  done
+	# Iterate over runs and process each one exactly once, 
+	# using job control start/finish/failed states in logfiles per dataType stored in ${logs_dir}.
+	for run in "${runs[@]}"; do
+		local job_control_line="${run}.trendanalysis.${data_handler}"
+		
+		if isAlreadyProcessed "${datatype}" "${job_control_line}"; then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '${type}' and project '${run}' already done."
+			continue
+		fi
+		markProcessingStarted "${datatype}" "${job_control_line}"
+		if "${data_handler}" "${run}" "${basedir}"; then
+			markProcessingFinished "${datatype}" "${job_control_line}"
+		else
+			markProcessingFailed "${datatype}" "${job_control_line}"
+		fi
+	done
 }
 
 
 #
 ##
-### Data proccessed functions.
+### Data proccessing functions.
 ##
 #
 
@@ -184,9 +183,9 @@ function updateOrCreateDatabase() {
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Force create database for project == ${_forceCreate}"
 	
 	if doesTableExist "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" "${_db_table}" || [[ "${_forceCreate}" != "true" ]]; then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_tableFile}"
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_tableFile} in exiting table ${_db_table}."
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Tabel ${_db_table} does exist in ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" 
-		# update datebase if tabel already exist and _forceCreate != true
+		# update datebase if tabel already exist.
 		chronqc database --update --db "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" \
 				"${_tableFile}" \
 				--db-table "${_db_table}" \
@@ -199,7 +198,7 @@ function updateOrCreateDatabase() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Tabel ${_db_table} does not exist in ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite, \
 				or _forceCreate. == true"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Create database for project ${_tableFile}"
-		# Created non existing table, and adds new rundata.
+		# Created non existing table, and adds new rundata. Or _forceCreate table when _forceCreate == true"
 		chronqc database --create -f \
 			-o "${CHRONQC_DATABASE_NAME}" \
 			"${_tableFile}" \
@@ -216,7 +215,6 @@ function updateOrCreateDatabase() {
 function processProjects() {
 	local _project="${1}"
 	local _chronqc_projects_dir="${2}"
-	#local _processprojecttodb_controle_line_base="${2}"
 	_chronqc_projects_dir="${_chronqc_projects_dir}/${_project}"
 
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${chronqc_tmp} ..."
@@ -250,7 +248,6 @@ function processProjects() {
 					runDate=$(echo "${laneSample}" | cut -d "_" -f 1)
 					echo -e "${laneSample},${_project},${runDate}" >> "${chronqc_tmp}/${_project}.lane.run_date_info.csv"
 				done
-				#cp "${chronqc_tmp}/${_project}.${_metrics}" "${chronqc_tmp}/${_project}.2.${_metrics}"
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _metrics: ${_metrics} to create ${_project}.lane.run_date_info.csv"
 				echo -e 'Sample\t%GC\ttotal_deduplicated_percentage' >> "${chronqc_tmp}/${_project}.2.${_metrics}"
 				awk -v FS="\t" -v OFS='\t' -v header="Sample,%GC,total_deduplicated_percentage" 'FNR==1{split(header,h,/,/);for(i=1; i in h; i++){for(j=1; j<=NF; j++){if(tolower(h[i])==tolower($j)){ d[i]=j; break }}}next}{for(i=1; i in h; i++)printf("%s%s",i>1 ? OFS:"",  i in d ?$(d[i]):"");print "";}' "${chronqc_tmp}/${_project}.${_metrics}" >> "${chronqc_tmp}/${_project}.2.${_metrics}"
@@ -269,7 +266,6 @@ function processProjects() {
 		# because samplenames differ from regular samplesheet at that stage in th epipeline.
 		# The Output is converted into standard ChronQC run_date_info.csv format.
 		#
-		#grep fastqc "${chronqc_tmp}/${_project}.multiqc_sources.txt" | awk -v p="${_project}" '{print $3","p","substr($3,1,6)}' >>"${chronqc_tmp}/${_project}.2.run_date_info.csv"
 		awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${chronqc_tmp}/${_project}.2.run_date_info.csv" > "${chronqc_tmp}/${_project}.2.run_date_info.csv.tmp"
 		awk 'BEGIN{FS=OFS=","} NR>1{cmd = "date -d \"" $3 "\" \"+%d/%m/%Y\"";cmd | getline out; $3=out; close("uuidgen")} 1' "${chronqc_tmp}/${_project}.lane.run_date_info.csv" > "${chronqc_tmp}/${_project}.lane.run_date_info.csv.tmp"
 
@@ -326,7 +322,6 @@ function processProjects() {
 function processRnaProjects {
 	local _rnaproject="${1}"
 	local _chronqc_rnaprojects_dir="${2}"
-	#local _processrnaprojecttodb_controle_line_base="${3}"
 	_chronqc_rnaprojects_dir="${_chronqc_rnaprojects_dir}/${_rnaproject}"
 	
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${chronqc_tmp} ..."
@@ -347,17 +342,13 @@ function processRnaProjects {
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "using _rnametrics: ${_rnametrics}"
 			if [[ "${_rnametrics}" == multiqc_picard_RnaSeqMetrics.txt ]]
 			then
+				# Rename one of the duplicated SAMPLE column names to make it work.
 				cp "${_chronqc_rnaprojects_dir}/${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}"
 				perl -pe 's|SAMPLE\t|SAMPLE_NAME2\t|' "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" > "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}"
 			else
 				cp "${_chronqc_rnaprojects_dir}/${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}"
 			fi
 		done
-		#
-		# Rename one of the duplicated SAMPLE column names to make it work.
-		#
-		#cp "${chronqc_tmp}/${_rnaproject}.run_date_info.csv" "${chronqc_tmp}/${_project}.2.run_date_info.csv"
-
 		#
 		# Get all the samples processed with FastQC form the MultiQC multi_source file,
 		# because samplenames differ from regular samplesheet at that stage in th epipeline.
@@ -370,8 +361,7 @@ function processRnaProjects {
 		#
 		_checkdate=$(awk 'BEGIN{FS=OFS=","} NR==2 {print $3}' "${chronqc_tmp}/${_rnaproject}.run_date_info.csv")
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "_checkdate:${_checkdate}"
-		#mv "${chronqc_tmp}/${_project}.2.run_date_info.csv.tmp" "${chronqc_tmp}/${_project}.2.run_date_info.csv"
-
+		
 		if [[ "${_checkdate}"  =~ [0-9] ]]
 		then
 			for i in "${MULTIQC_RNA_METRICS_TO_PLOT[@]}"
@@ -400,7 +390,6 @@ function processDarwin() {
 	local _darwin_project="${1}"
 	local _darwin_dir="${2}"
 	_chronqc_darwin_dir="${_darwin_dir}/"
-
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${chronqc_tmp} ..."
 	rm -rf "${chronqc_tmp:-missing}"/*
@@ -464,8 +453,7 @@ function processOpenArray() {
 	local _openarrayproject="${1}"
 	local _openarrayprojectdir
 	local _openarrayfile="${_openarrayproject}.txt"
-	local _chronqc_openarray_dir
-	_chronqc_openarray_dir="${tmp_trendanalyse_dir}/openarray/"
+	local _chronqc_openarray_dir="${tmp_trendanalyse_dir}/openarray/"
 	_openarrayprojectdir="${_chronqc_openarray_dir}/${_openarrayproject}/"
 	
 	rm -rf "${chronqc_tmp:-missing}"/*
@@ -521,7 +509,6 @@ function processOpenArray() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "generated ${_openarrayprojectdir}/${_openarrayproject}.run.run_date_info.csv"
 	
 		#create project.sample.csv file, and flag samples with SD > 80% as PASS.
-		#awk '/Sample ID/,/^$/; sub("%$","",$2) ' "${_filename}" > ${_filename%.*}.samples.csv
 		awk '/Sample ID/,/^$/ {
 			sub("%$","",$2); {
 			if ($2+0 > 75 ) {
@@ -649,7 +636,7 @@ function processOGM() {
 						'BEGIN {FS=","}{OFS="\t"}{if (NR>1){print $s,$s1,$s2,$s3,$s4,$s5,$s6,$s7}}' "${mainbasfile}" >> "OGM-${baslabel}_${today}.csv"
 
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "starting to update or create database using OGM-${baslabel}_${today}.csv and OGM-${baslabel}_runDateInfo_${today}.csv"
-				# force create a new table each time with forcecreate == true
+				# force create a new table with forcecreate == true
 				updateOrCreateDatabase "${baslabel}" "OGM-${baslabel}_${today}.csv" "OGM-${baslabel}_runDateInfo_${today}.csv" "${baslabel}" true|| return 1
 				mv "OGM-${baslabel}_${today}.csv" "${_ogm_dir}/metricsFinished/"
 				mv "OGM-${baslabel}_runDateInfo_${today}.csv" "${_ogm_dir}/metricsFinished/"
@@ -695,10 +682,7 @@ function processDragen() {
 	
 	if [[ "${_dataType}" == 'Exoom' ]]
 	then
-		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip data preprocesing for Exoom data type: ${_dragenProject}"
-		#runinfoFile="${dragenProject}".Dragen_runinfo.csv
-		#tableFile="${dragenProject}".Dragen.csv
-		#updateOrCreateDatabase dragenExoom "${_dragenProjectDir}/${tableFile}" "${_dragenProjectDir}/${runinfoFile}" dragenExoom 
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip data pre-processing for Exoom data for run: ${_dragenProject}"
 	else
 		IFS=$'\t' read -r -a statsFileColumnNames <<< "$(head -1 "${_dragenProjectDir}/${_dragenProject}".stats.tsv)"
 		
@@ -789,8 +773,7 @@ function processDragen() {
 	fi
 		
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Done making the run_data_info and table file for project ${_dragenProject}"
-		updateOrCreateDatabase "dragen${_dataType}" "${_dragenProjectDir}/${_dragenProject}.Dragen.csv" "${_dragenProjectDir}/${_dragenProject}.Dragen_runinfo.csv" "dragen${_dataType}"
-
+		updateOrCreateDatabase "dragen${_dataType}" "${_dragenProjectDir}/${_dragenProject}.Dragen.csv" "${_dragenProjectDir}/${_dragenProject}.Dragen_runinfo.csv" "dragen${_dataType}" || return 1
 }
 
 function generateReports() {
@@ -819,7 +802,6 @@ function generateReports() {
 
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Parsing commandline arguments ..."
 declare group=''
-declare InputDataType='all'
 
 while getopts ":g:l:h" opt
 do
@@ -853,13 +835,7 @@ if [[ -z "${group:-}" ]]
 then
 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' 'Must specify a group with -g.'
 fi
-case "${InputDataType}" in 
-		dragen|projects|RNAprojects|darwin|openarray|rawdata|ogm|all)
-			;;
-		*)
-			log4Bash 'FATAL' "${LINENO}" "${FUNCNAME[0]:-main}" '1' "Unhandled option. Try $(basename "${0}") -h for help."
-			;;
-esac
+
 #
 # Source config files.
 #
@@ -908,7 +884,7 @@ done
 # but before doing the actual data trnasfers.
 #
 
-#temp
+#temp for testing
 TMP_ROOT_DIR='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor'
 EBROOTTRENDANALYSIS='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor/Trendanalysis/'
 CHRONQC_TEMPLATE_DIRS='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor/Trendanalysis/templates'
@@ -917,10 +893,6 @@ lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Successfully got exclusive access to lock file ${lockFile} ..."
 log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Log files will be written to ${TMP_ROOT_DIR}/logs ..."
-
-#
-## Loops over all rawdata folders and checks if it is already in chronQC database. If not than call function 'processRawdataToDB "${rawdata}" to process this project.'
-#
 
 module load "ChronQC/${CHRONQC_VERSION}"
 
@@ -945,7 +917,6 @@ if ! declare -p ENABLED_TYPES &>/dev/null; then
   )
 fi
 
- 
 # Mapping: data Type + functions + inputdir
 declare -A DATA_HANDLERS=(
   [rawdata]=processRawdata
@@ -959,11 +930,11 @@ declare -A DATA_HANDLERS=(
 
 # loop over data types from config that need to be processed, and skip when false.
 for type in "${!DATA_HANDLERS[@]}"; do
-  if [[ "${ENABLED_TYPES[$type]:-false}" == "true" ]]; then
-    processData "$type" "${DATA_HANDLERS[$type]}" "${INPUTDIRS[$type]}"
-  else
-    log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip $type (disabled)"
-  fi
+	if [[ "${ENABLED_TYPES[$type]:-false}" == "true" ]]; then
+    	processData "$type" "${DATA_HANDLERS[$type]}" "${INPUTDIRS[$type]}"
+  	else
+    	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip $type (disabled)"
+  	fi
 done
 
 chronqc_tmp="${tmp_trendanalyse_dir}/tmp/"
