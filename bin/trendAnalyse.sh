@@ -145,7 +145,7 @@ function processData() {
 
   # Als er geen runs zijn gevonden, gebruik de basename van basedir, voor Darwin bijv.
   if [ "${#runs[@]}" -eq 0 ]; then
-    runs=( "$(basename "${basedir}")" )
+    runs=( "$(basename "${basedir}").${today}" )
   fi
 
   for run in "${runs[@]}"; do
@@ -399,7 +399,8 @@ function processRnaProjects {
 function processDarwin() {
 	local _darwin_project="${1}"
 	local _darwin_dir="${2}"
-	_chronqc_darwin_dir="${_darwin_dir}/${_darwin_project}"
+	_chronqc_darwin_dir="${_darwin_dir}/"
+
 
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${chronqc_tmp} ..."
 	rm -rf "${chronqc_tmp:-missing}"/*
@@ -625,7 +626,7 @@ function processOGM() {
 				LongestMolecuulFieldIndex=$((${statsFileColumnOffsets['Longest molecule (Kbp)']} + 1))
 				TimeStampFieldIndex=$((${statsFileColumnOffsets['Timestamp']} + 1))
 
-				echo -e 'Sample,Run,Date' > "OGM-${basmachine}_runDateInfo_${today}.csv"
+				echo -e 'Sample,Run,Date' > "OGM-${baslabel}_runDateInfo_${today}.csv"
 
 				while read -r line
 				do
@@ -633,10 +634,10 @@ function processOGM() {
 						sampleField=$(echo "${line}" | cut -d ',' -f "${chipRunUIDFieldIndex}")
 						runField=$(echo "${line}" | cut -d ',' -f "${FlowCellFielIndex}")
 						correctDate=$(date -d "${dateField}" '+%d/%m/%Y')
-						echo -e "${sampleField},${runField},${correctDate}" >> "OGM-${basmachine}_runDateInfo_${today}.csv"
+						echo -e "${sampleField},${runField},${correctDate}" >> "OGM-${baslabel}_runDateInfo_${today}.csv"
 				done < <(tail -n +2 "${mainbasfile}")
 
-				echo -e 'Sample\tFlow_cell\tTotal_DNA(>=150Kbp)\tN50(>=150Kbp)\tAverage_label_density(>=150Kbp)\tMap_rate(%)\tDNA_per_scan(Gbp)\tLongest_molecule(Kbp)' > "OGM-${basmachine}_${today}.csv"
+				echo -e 'Sample\tFlow_cell\tTotal_DNA(>=150Kbp)\tN50(>=150Kbp)\tAverage_label_density(>=150Kbp)\tMap_rate(%)\tDNA_per_scan(Gbp)\tLongest_molecule(Kbp)' > "OGM-${baslabel}_${today}.csv"
 				awk -v s="${chipRunUIDFieldIndex}" \
 						-v s1="${FlowCellFielIndex}" \
 						-v s2="${TotalDNAFieldIndex}" \
@@ -645,12 +646,13 @@ function processOGM() {
 						-v s5="${MapRateFieldIndex}" \
 						-v s6="${DNAPerScanFieldIndex}" \
 						-v s7="${LongestMolecuulFieldIndex}" \
-						'BEGIN {FS=","}{OFS="\t"}{if (NR>1){print $s,$s1,$s2,$s3,$s4,$s5,$s6,$s7}}' "${mainbasfile}" >> "OGM-${basmachine}_${today}.csv"
+						'BEGIN {FS=","}{OFS="\t"}{if (NR>1){print $s,$s1,$s2,$s3,$s4,$s5,$s6,$s7}}' "${mainbasfile}" >> "OGM-${baslabel}_${today}.csv"
 
-				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "starting to update or create database using OGM-${basmachine}_${today}.csv and OGM-${basmachine}_runDateInfo_${today}.csv"
-				updateOrCreateDatabase "${basmachine}" "OGM-${basmachine}_${today}.csv" "OGM-${basmachine}_runDateInfo_${today}.csv" ogm || return 1
-				mv "OGM-${basmachine}_${today}.csv" "${_ogm_dir}/metricsFinished/"
-				mv "OGM-${basmachine}_runDateInfo_${today}.csv" "${_ogm_dir}/metricsFinished/"
+				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "starting to update or create database using OGM-${baslabel}_${today}.csv and OGM-${baslabel}_runDateInfo_${today}.csv"
+				# force create a new table each time with forcecreate == true
+				updateOrCreateDatabase "${baslabel}" "OGM-${baslabel}_${today}.csv" "OGM-${baslabel}_runDateInfo_${today}.csv" "${baslabel}" true|| return 1
+				mv "OGM-${baslabel}_${today}.csv" "${_ogm_dir}/metricsFinished/"
+				mv "OGM-${baslabel}_runDateInfo_${today}.csv" "${_ogm_dir}/metricsFinished/"
 			done
 		fi
 	fi
@@ -687,7 +689,6 @@ function processDragen() {
 
 	
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_dragenProject}"
-	file_date=$(date -r "${_dragenProjectDir}/${_dragenProject}.stats.tsv" '+%d/%m/%Y')
 	
 	declare -a statsFileColumnNames=()
 	declare -A statsFileColumnOffsets=()
@@ -741,6 +742,7 @@ function processDragen() {
 			coverage_uniformityCoverageFieldIndex=$((${statsFileColumnOffsets['coverage_uniformity']} + 1))
 		fi
 
+		file_date=$(date -r "${_dragenProjectDir}/${_dragenProject}.stats.tsv" '+%d/%m/%Y')
 		echo -e 'Sample,Run,Date' > "${_dragenProjectDir}/${_dragenProject}.Dragen_runinfo.csv"
 		awk -v s="${_dragenProject}" -v f="${file_date}" 'BEGIN {FS="\t"}{OFS=","}{if (NR>1){print $1,s,f}}' "${_dragenProjectDir}/${_dragenProject}.stats.tsv" >> "${_dragenProjectDir}/${_dragenProject}.Dragen_runinfo.csv"
 		
@@ -791,13 +793,20 @@ function processDragen() {
 
 }
 
-#processRawdata()    { log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> rawdata verwerken: $1"; }
-#processProjects()   { log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> project verwerken: $1"; }
-#processRnaProjects(){ log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> RNA-project verwerken: $1"; }
-#processDarwin()     { log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> darwin verwerken: $1"; }
-#processDragen()     { log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> dragen verwerken: $1"; }
-#processOpenarray()  { log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> openarray verwerken: $1"; }
-#processOgm()        { log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "  -> ogm verwerken: $1"; }
+function generateReports() {
+
+	local _job_controle_file_base="${1}"
+	# shellcheck disable=SC1091
+	source "${CHRONQC_TEMPLATE_DIRS}/reports.sh" || { 
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." \
+			2>&1 | tee -a "${_job_controle_file_base}.started"
+		mv "${_job_controle_file_base}."{started,failed}
+		return
+	}
+
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
+	mv "${_job_controle_file_base}."{started,finished}
+}
 
 #
 ##
@@ -901,7 +910,8 @@ done
 
 #temp
 TMP_ROOT_DIR='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor'
-EBROOTTRENDANALYSIS=''
+EBROOTTRENDANALYSIS='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor/Trendanalysis/'
+CHRONQC_TEMPLATE_DIRS='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor/Trendanalysis/templates'
 
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
@@ -955,6 +965,25 @@ for type in "${!DATA_HANDLERS[@]}"; do
     log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip $type (disabled)"
   fi
 done
+
+chronqc_tmp="${tmp_trendanalyse_dir}/tmp/"
+log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${chronqc_tmp}* ..."
+rm -rf "${chronqc_tmp:-missing}"/*
+
+#
+## Function for generating a list of ChronQC plots.
+#
+
+job_controle_file_base="${logs_dir}/generate_plots.${today}_${SCRIPT_NAME}"
+
+if [[ -e "${job_controle_file_base}.finished" ]]
+then
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already generated plots on ${today}."
+else
+	touch "${job_controle_file_base}.started"
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "New trendanalysis plots will be generated on ${today}."
+	generateReports "${job_controle_file_base}"
+fi
 
 trap - EXIT
 exit 0
