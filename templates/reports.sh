@@ -49,4 +49,3 @@ chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -f "${CHRONQC_DATABASE_NAME}
 #
 chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p ogm -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" bas1 "${CHRONQC_TEMPLATE_DIRS}/chronqc.ogm-bas1.json"
 chronqc plot -o "${CHRONQC_REPORTS_DIRS}/${TODAY}/" -p ogm -f "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" bas3 "${CHRONQC_TEMPLATE_DIRS}/chronqc.ogm-bas3.json"
-

@@ -94,13 +94,13 @@ function doesTableExist() {
 }
 
 function isAlreadyProcessed() {
-    local datatype="${1}"
-    local job_control_line="${2}"
+    local _datatype="${1}"
+    local _job_control_line="${2}"
     
-    local finished_file="${logs_dir}/process.${datatype}.trendanalysis.finished"
+    local finished_file="${logs_dir}/process.${_datatype}.trendanalysis.finished"
     if [[ -f "${finished_file}" ]]
     then
-      grep -Fxq "${job_control_line}" "${finished_file}"
+      grep -Fxq "${_job_control_line}" "${finished_file}"
     else
       touch "${finished_file}"
       return 1
@@ -108,59 +108,59 @@ function isAlreadyProcessed() {
 }
 
 function markProcessingStarted() {
-    local datatype="${1}"
-    local job_control_line="${2}"
+    local _datatype="${1}"
+    local _job_control_line="${2}"
 
-    touch "${logs_dir}/process.${datatype}.trendanalysis."{started,failed,finished}
-    echo "${job_control_line}" >> "${logs_dir}/process.${datatype}.trendanalysis.started"
+    touch "${logs_dir}/process.${_datatype}.trendanalysis."{started,failed,finished}
+    echo "${_job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.started"
 }
 
 function markProcessingFinished() {
-    local datatype="${1}"
-    local job_control_line="${2}"
+    local _datatype="${1}"
+    local _job_control_line="${2}"
 
-    sed -i "/${job_control_line}/d" "${logs_dir}/process.${datatype}.trendanalysis."{started,failed}
-    echo "${job_control_line}" >> "${logs_dir}/process.${datatype}.trendanalysis.finished"
+    sed -i "/${_job_control_line}/d" "${logs_dir}/process.${_datatype}.trendanalysis."{started,failed}
+    echo "${_job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.finished"
 }
 
 function markProcessingFailed() {
-    local datatype="${1}"
-    local job_control_line="${2}"
+    local _datatype="${1}"
+    local _job_control_line="${2}"
 
-    sed -i "/${job_control_line}/d" "${logs_dir}/process.${datatype}.trendanalysis.started"
-    echo "${job_control_line}" >> "${logs_dir}/process.${datatype}.trendanalysis.failed"
+    sed -i "/${job_control_line}/d" "${logs_dir}/process.${_datatype}.trendanalysis.started"
+    echo "${job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.failed"
 }
 
 # Generic data processor for each datahandler/dataType
 function processData() {
-	local datatype="${1}"
-	local data_handler="${2}"
-	local basedir="${3}"
+	local _datatype="${1}"
+	local _data_handler="${2}"
+	local _basedir="${3}"
 
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '$type' started..."
+	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '$_datatype' started..."
 	# Get all runDirs in form the provided $basedir
-	readarray -t runs < <(find "${basedir}" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | xargs -r basename -a)
+	readarray -t runs < <(find "${_basedir}" -maxdepth 1 -mindepth 1 -type d -name "[!.]*" | xargs -r basename -a)
 
 	# If exporting a full dataset and no rundirs are provided,
 	# use basename + date as the rundir. For example: ogm and darwin dataType.
 	if [ "${#runs[@]}" -eq 0 ]; then
-		runs=( "$(basename "${basedir}").${today}" )
+		runs=( "$(basename "${_basedir}").${today}" )
 	fi
 
 	# Iterate over runs and process each one exactly once, 
 	# using job control start/finish/failed states in logfiles per dataType stored in ${logs_dir}.
 	for run in "${runs[@]}"; do
-		local job_control_line="${run}.trendanalysis.${data_handler}"
+		local _job_control_line="${run}.trendanalysis.${_data_handler}"
 		
-		if isAlreadyProcessed "${datatype}" "${job_control_line}"; then
-			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '${type}' and project '${run}' already done."
+		if isAlreadyProcessed "${_datatype}" "${_job_control_line}"; then
+			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '${_datatype}' and project '${run}' already done."
 			continue
 		fi
-		markProcessingStarted "${datatype}" "${job_control_line}"
-		if "${data_handler}" "${run}" "${basedir}"; then
-			markProcessingFinished "${datatype}" "${job_control_line}"
+		markProcessingStarted "${_datatype}" "${_job_control_line}"
+		if "${_data_handler}" "${run}" "${_basedir}"; then
+			markProcessingFinished "${_datatype}" "${_job_control_line}"
 		else
-			markProcessingFailed "${datatype}" "${job_control_line}"
+			markProcessingFailed "${_datatype}" "${_job_control_line}"
 		fi
 	done
 }
@@ -192,7 +192,7 @@ function updateOrCreateDatabase() {
 				--run-date-info "${_runDateInfo}" \
 				"${_dataLabel}" || {
 					log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to import ${_tableFile} with ${_dataLabel} stored to Chronqc database." 
-					return 1
+					return
 		}
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Tabel ${_db_table} does not exist in ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite, \
@@ -206,7 +206,7 @@ function updateOrCreateDatabase() {
 			--db-table "${_db_table}" \
 			"${_dataLabel}" -f || {
 			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create database and import ${_tableFile} with ${_dataLabel} stored to Chronqc database." 
-			return 1
+			return
 			}
 		fi
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "${FUNCNAME[0]} ${_tableFile} with ${_dataLabel} was stored in Chronqc database."
@@ -613,7 +613,7 @@ function processOGM() {
 				LongestMolecuulFieldIndex=$((${statsFileColumnOffsets['Longest molecule (Kbp)']} + 1))
 				TimeStampFieldIndex=$((${statsFileColumnOffsets['Timestamp']} + 1))
 
-				echo -e 'Sample,Run,Date' > "OGM-${baslabel}_runDateInfo_${today}.csv"
+				echo -e 'Sample,Run,Date' > "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv"
 
 				while read -r line
 				do
@@ -621,10 +621,10 @@ function processOGM() {
 						sampleField=$(echo "${line}" | cut -d ',' -f "${chipRunUIDFieldIndex}")
 						runField=$(echo "${line}" | cut -d ',' -f "${FlowCellFielIndex}")
 						correctDate=$(date -d "${dateField}" '+%d/%m/%Y')
-						echo -e "${sampleField},${runField},${correctDate}" >> "OGM-${baslabel}_runDateInfo_${today}.csv"
+						echo -e "${sampleField},${runField},${correctDate}" >> "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv"
 				done < <(tail -n +2 "${mainbasfile}")
 
-				echo -e 'Sample\tFlow_cell\tTotal_DNA(>=150Kbp)\tN50(>=150Kbp)\tAverage_label_density(>=150Kbp)\tMap_rate(%)\tDNA_per_scan(Gbp)\tLongest_molecule(Kbp)' > "OGM-${baslabel}_${today}.csv"
+				echo -e 'Sample\tFlow_cell\tTotal_DNA(>=150Kbp)\tN50(>=150Kbp)\tAverage_label_density(>=150Kbp)\tMap_rate(%)\tDNA_per_scan(Gbp)\tLongest_molecule(Kbp)' > "${_ogm_dir}/OGM-${baslabel}_${today}.csv"
 				awk -v s="${chipRunUIDFieldIndex}" \
 						-v s1="${FlowCellFielIndex}" \
 						-v s2="${TotalDNAFieldIndex}" \
@@ -633,13 +633,13 @@ function processOGM() {
 						-v s5="${MapRateFieldIndex}" \
 						-v s6="${DNAPerScanFieldIndex}" \
 						-v s7="${LongestMolecuulFieldIndex}" \
-						'BEGIN {FS=","}{OFS="\t"}{if (NR>1){print $s,$s1,$s2,$s3,$s4,$s5,$s6,$s7}}' "${mainbasfile}" >> "OGM-${baslabel}_${today}.csv"
+						'BEGIN {FS=","}{OFS="\t"}{if (NR>1){print $s,$s1,$s2,$s3,$s4,$s5,$s6,$s7}}' "${mainbasfile}" >> "${_ogm_dir}/OGM-${baslabel}_${today}.csv"
 
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "starting to update or create database using OGM-${baslabel}_${today}.csv and OGM-${baslabel}_runDateInfo_${today}.csv"
 				# force create a new table with forcecreate == true
-				updateOrCreateDatabase "${baslabel}" "OGM-${baslabel}_${today}.csv" "OGM-${baslabel}_runDateInfo_${today}.csv" "${baslabel}" true|| return 1
-				mv "OGM-${baslabel}_${today}.csv" "${_ogm_dir}/metricsFinished/"
-				mv "OGM-${baslabel}_runDateInfo_${today}.csv" "${_ogm_dir}/metricsFinished/"
+				updateOrCreateDatabase "${baslabel}" "${_ogm_dir}/OGM-${baslabel}_${today}.csv" "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv" "${baslabel}" true|| return 1
+				mv "${_ogm_dir}/OGM-${baslabel}_${today}.csv" "${_ogm_dir}/metricsFinished/"
+				mv "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv" "${_ogm_dir}/metricsFinished/"
 			done
 		fi
 	fi
@@ -777,18 +777,10 @@ function processDragen() {
 }
 
 function generateReports() {
-
-	local _job_controle_file_base="${1}"
 	# shellcheck disable=SC1091
 	source "${CHRONQC_TEMPLATE_DIRS}/reports.sh" || { 
-		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database." \
-			2>&1 | tee -a "${_job_controle_file_base}.started"
-		mv "${_job_controle_file_base}."{started,failed}
-		return
+		log4Bash 'ERROR' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Failed to create all reports from the Chronqc database."  
 	}
-
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "ChronQC reports finished."
-	mv "${_job_controle_file_base}."{started,finished}
 }
 
 #
@@ -868,11 +860,10 @@ done
 #
 # Write access to prm storage requires data manager account.
 #
-
-# if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
-# then
-# 	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
-# fi
+if [[ "${ROLE_USER}" != "${ATEAMBOTUSER}" ]]
+then
+	log4Bash 'FATAL' "${LINENO}" "${FUNCNAME:-main}" '1' "This script must be executed by user ${ATEAMBOTUSER}, but you are ${ROLE_USER} (${REAL_USER})."
+fi
 
 #
 # Make sure only one copy of this script runs simultaneously
@@ -883,11 +874,6 @@ done
 # * and parsing commandline arguments,
 # but before doing the actual data trnasfers.
 #
-
-#temp for testing
-TMP_ROOT_DIR='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor'
-EBROOTTRENDANALYSIS='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor/Trendanalysis/'
-CHRONQC_TEMPLATE_DIRS='/groups/umcg-atd/tmp07/umcg-gvdvries/trendanalyse-refactor/Trendanalysis/templates'
 
 lockFile="${TMP_ROOT_DIR}/logs/${SCRIPT_NAME}.lock"
 thereShallBeOnlyOne "${lockFile}"
@@ -901,6 +887,7 @@ logs_dir="${TMP_ROOT_DIR}/logs/trendanalysis/"
 mkdir -p "${TMP_ROOT_DIR}/logs/trendanalysis/"
 chronqc_tmp="${tmp_trendanalyse_dir}/tmp/"
 CHRONQC_DATABASE_NAME="${tmp_trendanalyse_dir}/database/"
+CHRONQC_TEMPLATE_DIRS="${EBROOTTRENDANALYSIS}/templates"
 today=$(date '+%Y%m%d')
 
 # Make sure ENABLED_TYPES always exist
@@ -914,10 +901,11 @@ if ! declare -p ENABLED_TYPES &>/dev/null; then
     [dragen]="${dragen:-false}"
     [openarray]="${openarray:-false}"
     [ogm]="${ogm:-false}"
+	[report]="${report:-false}"
   )
 fi
 
-# Mapping: data Type + functions + inputdir
+# Mapping: dataType + functions + inputdir
 declare -A DATA_HANDLERS=(
   [rawdata]=processRawdata
   [projects]=processProjects
@@ -937,24 +925,15 @@ for type in "${!DATA_HANDLERS[@]}"; do
   	fi
 done
 
+#
+## Generating a list of ChronQC plots after all the dataTypes have been processed.
+## processData: dataType label + functions + inputdir
+#
+processData "generate_plots" "generateReports" "${INPUTDIRS['report']}"
+
 chronqc_tmp="${tmp_trendanalyse_dir}/tmp/"
 log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "cleanup ${chronqc_tmp}* ..."
 rm -rf "${chronqc_tmp:-missing}"/*
-
-#
-## Function for generating a list of ChronQC plots.
-#
-
-job_controle_file_base="${logs_dir}/generate_plots.${today}_${SCRIPT_NAME}"
-
-if [[ -e "${job_controle_file_base}.finished" ]]
-then
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skipping already generated plots on ${today}."
-else
-	touch "${job_controle_file_base}.started"
-	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "New trendanalysis plots will be generated on ${today}."
-	generateReports "${job_controle_file_base}"
-fi
 
 trap - EXIT
 exit 0
