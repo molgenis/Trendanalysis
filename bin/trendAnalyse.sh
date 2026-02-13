@@ -372,9 +372,9 @@ function processRnaProjects {
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${_rnametrics}________${_rnatable}_____________"
 				if [[ "${_rnametrics}" == multiqc_picard_RnaSeqMetrics.txt ]]
 				then
-					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA || return 1 
+					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNAproject || return 1 
 				else
-					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA || return 1 
+					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNAproject || return 1 
 				fi
 			done
 		else
