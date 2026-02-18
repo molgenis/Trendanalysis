@@ -7,8 +7,8 @@
 #
 if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]
 then
-		echo "Sorry, you need at least bash 4.x to use ${0}." >&2
-		exit 1
+	echo "Sorry, you need at least bash 4.x to use ${0}." >&2
+	exit 1
 fi
 
 set -e # Exit if any subcommand or pipeline returns a non-zero exit status.
@@ -35,12 +35,12 @@ REAL_USER="$(logname 2>/dev/null || echo 'no login name')"
 #
 if [[ -f "${LIB_DIR}/sharedFunctions.bash" && -r "${LIB_DIR}/sharedFunctions.bash" ]]
 then
-		# shellcheck source=lib/sharedFunctions.bash
-		source "${LIB_DIR}/sharedFunctions.bash"
+	# shellcheck source=lib/sharedFunctions.bash
+	source "${LIB_DIR}/sharedFunctions.bash"
 else
-		printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
-		trap - EXIT
-		exit 1
+	printf '%s\n' "FATAL: cannot find or cannot access sharedFunctions.bash"
+	trap - EXIT
+	exit 1
 fi
 
 function showHelp() {
@@ -72,8 +72,8 @@ Config and dependencies:
 ===============================================================================================================
 
 EOH
-		trap - EXIT
-		exit 0
+	trap - EXIT
+	exit 0
 }
 
 #
@@ -372,9 +372,9 @@ function processRnaProjects {
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${_rnametrics}________${_rnatable}_____________"
 				if [[ "${_rnametrics}" == multiqc_picard_RnaSeqMetrics.txt ]]
 				then
-					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNAproject || return 1 
+					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA || return 1 
 				else
-					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNAproject || return 1 
+					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA || return 1 
 				fi
 			done
 		else
@@ -906,22 +906,22 @@ fi
 
 # Mapping: dataType + functions + inputdir
 declare -A DATA_HANDLERS=(
-  [rawdata]=processRawdata
-  [projects]=processProjects
-  [RNAprojects]=processRnaProjects
-  [darwin]=processDarwin
-  [dragen]=processDragen
-  [openarray]=processOpenArray
-  [ogm]=processOGM
+	[rawdata]=processRawdata
+	[projects]=processProjects
+	[RNAprojects]=processRnaProjects
+	[darwin]=processDarwin
+	[dragen]=processDragen
+	[openarray]=processOpenArray
+	[ogm]=processOGM
 )
 
 # loop over data types from config that need to be processed, and skip when false.
 for type in "${!DATA_HANDLERS[@]}"; do
 	if [[ "${ENABLED_TYPES[$type]:-false}" == "true" ]]; then
-    	processData "$type" "${DATA_HANDLERS[$type]}" "${INPUTDIRS[$type]}"
-  	else
-    	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip $type (disabled)"
-  	fi
+		processData "${type}" "${DATA_HANDLERS[$type]}" "${INPUTDIRS[$type]}"
+	else
+		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Skip $type (disabled)"
+	fi
 done
 
 #
