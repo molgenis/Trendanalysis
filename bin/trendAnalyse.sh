@@ -301,10 +301,10 @@ function processProjects() {
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${_metrics}________${_table}_____________"
 				if [[ "${_metrics}" == multiqc_fastqc.txt ]]
 				then
-					updateOrCreateDatabase "${_table}" "${chronqc_tmp}/${_project}.2.${_metrics}" "${chronqc_tmp}/${_project}.lane.run_date_info.csv" "${_panel}" || return 1
+					updateOrCreateDatabase "${_table}" "${chronqc_tmp}/${_project}.2.${_metrics}" "${chronqc_tmp}/${_project}.lane.run_date_info.csv" "${_panel}"
 				elif [[ -f "${chronqc_tmp}/${_project}.2.${_metrics}" ]]
 				then
-					updateOrCreateDatabase "${_table}" "${chronqc_tmp}/${_project}.2.${_metrics}" "${chronqc_tmp}/${_project}.2.run_date_info.csv" "${_panel}" || return 1
+					updateOrCreateDatabase "${_table}" "${chronqc_tmp}/${_project}.2.${_metrics}" "${chronqc_tmp}/${_project}.2.run_date_info.csv" "${_panel}"
 				else
 					log4Bash 'INFO' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "The file ${chronqc_tmp}/${_project}.2.${_metrics} does not exist, so can't be added to the database"
 					continue
@@ -372,9 +372,9 @@ function processRnaProjects {
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "________________${_rnametrics}________${_rnatable}_____________"
 				if [[ "${_rnametrics}" == multiqc_picard_RnaSeqMetrics.txt ]]
 				then
-					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA || return 1 
+					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.1.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA 
 				else
-					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA || return 1 
+					updateOrCreateDatabase "${_rnatable}" "${chronqc_tmp}/${_rnaproject}.${_rnametrics}" "${chronqc_tmp}/${_rnaproject}.2.run_date_info.csv" RNA 
 				fi
 			done
 		else
@@ -439,11 +439,11 @@ function processDarwin() {
 			grep Nimbus "${_runInfoFile}" >> "${chronqc_tmp}/ConcentratieNimbus_runinfo_${_fileDate}.csv"
 			grep Nimbus "${_tableFile}" >> "${chronqc_tmp}/ConcentratieNimbus_${_fileDate}.csv"
 			
-			updateOrCreateDatabase "${_fileType}" "${chronqc_tmp}/ConcentratieNimbus_${_fileDate}.csv" "${chronqc_tmp}/ConcentratieNimbus_runinfo_${_fileDate}.csv" Nimbus true || return 1
+			updateOrCreateDatabase "${_fileType}" "${chronqc_tmp}/ConcentratieNimbus_${_fileDate}.csv" "${chronqc_tmp}/ConcentratieNimbus_runinfo_${_fileDate}.csv" Nimbus true
 
 			log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "database filled with ConcentratieNimbus_${_fileDate}.csv"
 		else
-			updateOrCreateDatabase "${_fileType}" "${_tableFile}" "${_runInfoFile}" NGSlab true || return 1
+			updateOrCreateDatabase "${_fileType}" "${_tableFile}" "${_runInfoFile}" NGSlab true
 		fi
 	done
 }
@@ -529,9 +529,9 @@ function processOpenArray() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "generated ${_openarrayprojectdir}/${_openarrayproject}.samples.run_date_info.csv"
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "__________________function processOpenArray is done___________________"
 
-		updateOrCreateDatabase run "${_openarrayprojectdir}/${_openarrayproject}.run.csv" "${_openarrayprojectdir}/${_openarrayproject}.run.run_date_info.csv" openarray || return 1
-		updateOrCreateDatabase samples "${_openarrayprojectdir}/${_openarrayproject}.samples.csv" "${_openarrayprojectdir}/${_openarrayproject}.samples.run_date_info.csv" openarray || return 1
-		updateOrCreateDatabase snps "${_openarrayprojectdir}/${_openarrayproject}.snps.csv" "${_openarrayprojectdir}/${_openarrayproject}.snps.run_date_info.csv" openarray || return 1
+		updateOrCreateDatabase run "${_openarrayprojectdir}/${_openarrayproject}.run.csv" "${_openarrayprojectdir}/${_openarrayproject}.run.run_date_info.csv" openarray
+		updateOrCreateDatabase samples "${_openarrayprojectdir}/${_openarrayproject}.samples.csv" "${_openarrayprojectdir}/${_openarrayproject}.samples.run_date_info.csv" openarray
+		updateOrCreateDatabase snps "${_openarrayprojectdir}/${_openarrayproject}.snps.csv" "${_openarrayprojectdir}/${_openarrayproject}.snps.run_date_info.csv" openarray
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "done updating the database with ${_openarrayproject}"
 	else
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "Project: ${_openarrayprojectdir}/${_openarrayproject} is not accrording to standard formatting, skipping"
@@ -637,7 +637,7 @@ function processOGM() {
 
 				log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME[0]:-main}" '0' "starting to update or create database using OGM-${baslabel}_${today}.csv and OGM-${baslabel}_runDateInfo_${today}.csv"
 				# force create a new table with forcecreate == true
-				updateOrCreateDatabase "${baslabel}" "${_ogm_dir}/OGM-${baslabel}_${today}.csv" "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv" "${baslabel}" true|| return 1
+				updateOrCreateDatabase "${baslabel}" "${_ogm_dir}/OGM-${baslabel}_${today}.csv" "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv" "${baslabel}" true
 				mv "${_ogm_dir}/OGM-${baslabel}_${today}.csv" "${_ogm_dir}/metricsFinished/"
 				mv "${_ogm_dir}/OGM-${baslabel}_runDateInfo_${today}.csv" "${_ogm_dir}/metricsFinished/"
 			done
@@ -773,7 +773,7 @@ function processDragen() {
 	fi
 		
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Done making the run_data_info and table file for project ${_dragenProject}"
-		updateOrCreateDatabase "dragen${_dataType}" "${_dragenProjectDir}/${_dragenProject}.Dragen.csv" "${_dragenProjectDir}/${_dragenProject}.Dragen_runinfo.csv" "dragen${_dataType}" || return 1
+		updateOrCreateDatabase "dragen${_dataType}" "${_dragenProjectDir}/${_dragenProject}.Dragen.csv" "${_dragenProjectDir}/${_dragenProject}.Dragen_runinfo.csv" "dragen${_dataType}"
 }
 
 function generateReports() {
