@@ -82,53 +82,53 @@ EOH
 ##
 #
 function doesTableExist() {
-    local _db_path="${1}"
-    local _db_table="${2}"
+	local _db_path="${1}"
+	local _db_table="${2}"
 
-    [[ -f "${_db_path}" ]] || return 1
-    [[ -n "${_db_table}" ]] || return 1
+	[[ -f "${_db_path}" ]] || return 1
+	[[ -n "${_db_table}" ]] || return 1
 
-    sqlite3 "${_db_path}" \
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='$_db_table' LIMIT 1;" \
-        | grep -q 1
+	sqlite3 "${_db_path}" \
+		"SELECT 1 FROM sqlite_master WHERE type='table' AND name='$_db_table' LIMIT 1;" \
+		| grep -q 1
 }
 
 function isAlreadyProcessed() {
-    local _datatype="${1}"
-    local _job_control_line="${2}"
-    
-    local finished_file="${logs_dir}/process.${_datatype}.trendanalysis.finished"
-    if [[ -f "${finished_file}" ]]
-    then
-      grep -Fxq "${_job_control_line}" "${finished_file}"
-    else
-      touch "${finished_file}"
-      return 1
-    fi
+	local _datatype="${1}"
+	local _job_control_line="${2}"
+
+	local finished_file="${logs_dir}/process.${_datatype}.trendanalysis.finished"
+	if [[ -f "${finished_file}" ]]
+	then
+		grep -Fxq "${_job_control_line}" "${finished_file}"	
+	else
+		touch "${finished_file}"
+		return 1
+	fi
 }
 
 function markProcessingStarted() {
-    local _datatype="${1}"
-    local _job_control_line="${2}"
+	local _datatype="${1}"
+	local _job_control_line="${2}"
 
-    touch "${logs_dir}/process.${_datatype}.trendanalysis."{started,failed,finished}
-    echo "${_job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.started"
+	touch "${logs_dir}/process.${_datatype}.trendanalysis."{started,failed,finished}
+	echo "${_job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.started"
 }
 
 function markProcessingFinished() {
-    local _datatype="${1}"
-    local _job_control_line="${2}"
+	local _datatype="${1}"
+	local _job_control_line="${2}"
 
-    sed -i "/${_job_control_line}/d" "${logs_dir}/process.${_datatype}.trendanalysis."{started,failed}
-    echo "${_job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.finished"
+	sed -i "/${_job_control_line}/d" "${logs_dir}/process.${_datatype}.trendanalysis."{started,failed}
+	echo "${_job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.finished"
 }
 
 function markProcessingFailed() {
-    local _datatype="${1}"
-    local _job_control_line="${2}"
+	local _datatype="${1}"
+	local _job_control_line="${2}"
 
-    sed -i "/${job_control_line}/d" "${logs_dir}/process.${_datatype}.trendanalysis.started"
-    echo "${job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.failed"
+	sed -i "/${job_control_line}/d" "${logs_dir}/process.${_datatype}.trendanalysis.started"
+	echo "${job_control_line}" >> "${logs_dir}/process.${_datatype}.trendanalysis.failed"
 }
 
 # Generic data processor for each datahandler/dataType
@@ -891,17 +891,17 @@ today=$(date '+%Y%m%d')
 
 # Make sure ENABLED_TYPES always exist
 if ! declare -p ENABLED_TYPES &>/dev/null; then
-  # Declare all false if not defined.
-  declare -A ENABLED_TYPES=(
-    [rawdata]="${rawdata:-false}"
-    [projects]="${projects:-false}"
-    [RNAprojects]="${RNAprojects:-false}"
-    [darwin]="${darwin:-false}"
-    [dragen]="${dragen:-false}"
-    [openarray]="${openarray:-false}"
-    [ogm]="${ogm:-false}"
-	[report]="${report:-false}"
-  )
+	# Declare all false if not defined.
+	declare -A ENABLED_TYPES=(
+		[rawdata]="${rawdata:-false}"
+		[projects]="${projects:-false}"
+		[RNAprojects]="${RNAprojects:-false}"
+		[darwin]="${darwin:-false}"
+		[dragen]="${dragen:-false}"
+		[openarray]="${openarray:-false}"
+		[ogm]="${ogm:-false}"
+		[report]="${report:-false}"
+	)
 fi
 
 # Mapping: dataType + functions + inputdir
