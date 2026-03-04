@@ -152,6 +152,7 @@ function processData() {
 	for run in "${runs[@]}"; do
 		local _job_control_line="${run}.trendanalysis.${_data_handler}"
 		
+		# shellcheck disable=SC2310
 		if isAlreadyProcessed "${_datatype}" "${_job_control_line}"; then
 			log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing of datatype '${_datatype}' and project '${run}' already done."
 			continue
@@ -182,6 +183,7 @@ function updateOrCreateDatabase() {
 	
 	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Force create database for project == ${_forceCreate}"
 	
+	# shellcheck disable=SC2310
 	if doesTableExist "${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" "${_db_table}" || [[ "${_forceCreate}" != "true" ]]; then
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "Update database for project ${_tableFile} in exiting table ${_db_table}."
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Tabel ${_db_table} does exist in ${CHRONQC_DATABASE_NAME}/chronqc_db/chronqc.stats.sqlite" 
