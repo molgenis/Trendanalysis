@@ -422,17 +422,7 @@ function processDarwin() {
 		log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "local variables generateChronQCOutput:_runinfo=${_runInfo},_tablefile=${_tableFile}, _filetype=${_fileType}, _fileDate=${_fileDate}"
 		log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "starting to file the trendanalysis database with :${_runInfo} and ${_tableFile}"
 
-		if [[ "${_fileType}"  == 'ArrayInzetten' ]]
-		then
-			head -1 "${_runInfoFile}" > "${chronqc_tmp}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv"
-			head -1 "${_tableFile}" > "${chronqc_tmp}/ArrayInzettenLabpassed_${_fileDate}.csv"
-			grep labpassed "${_runInfoFile}" >> "${chronqc_tmp}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv"
-			grep labpassed "${_tableFile}" >> "${chronqc_tmp}/ArrayInzettenLabpassed_${_fileDate}.csv"
-
-			updateOrCreateDatabase "${_fileType}All" "${_tableFile}" "${_runInfoFile}" all true
-			updateOrCreateDatabase "${_fileType}Labpassed" "${chronqc_tmp}/ArrayInzettenLabpassed_${_fileDate}.csv" "${chronqc_tmp}/ArrayInzettenLabpassed_runinfo_${_fileDate}.csv" labpassed true
-
-		elif [[ "${_fileType}" == 'Concentratie' ]]
+		if [[ "${_fileType}" == 'Concentratie' ]]
 		then
 			# for now the database will be filled with only the concentration information from the Nimbus2000
 			head -1 "${_runInfoFile}" > "${chronqc_tmp}/ConcentratieNimbus_runinfo_${_fileDate}.csv"
@@ -655,7 +645,7 @@ function processRawdata(){
 	log4Bash 'TRACE' "${LINENO}" "${FUNCNAME:-main}" '0' "Removing files from ${chronqc_tmp} ..."
 	rm -rf "${chronqc_tmp:-missing}"/*
 
-	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_chronqc_rawdata_dir}/SequenceRun_run_date_info_run_date_info.csv"
+	log4Bash 'DEBUG' "${LINENO}" "${FUNCNAME:-main}" '0' "Processing ${_chronqc_rawdata_dir}/SequenceRun_run_date_info.csv"
 	log4Bash 'INFO' "${LINENO}" "${FUNCNAME:-main}" '0' "New batch ${_rawdata} will be processed."
 	sequencer=$(echo "${_rawdata}" | cut -d '_' -f2)
 
