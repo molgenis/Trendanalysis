@@ -904,16 +904,16 @@ declare -A DATA_HANDLERS=(
 
 # Overwrite config defined dataTypes if a list was provided via commandline option '-d type'
 if [[ -n "${cli_datatype}" ]]; then
-    declare -A ENABLED_TYPES=()
-    IFS=',' read -ra types <<< "${cli_datatype}"
+	declare -A ENABLED_TYPES=()
+	IFS=',' read -ra types <<< "${cli_datatype}"
 
-    for t in "${types[@]}"; do
-        if [[ -z "${DATA_HANDLERS[${t}]:-}" ]]; then
-            log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown datatype '${t}'"
-            exit 1
-        fi
-        ENABLED_TYPES["${t}"]=true
-    done
+	for t in "${types[@]}"; do
+		if [[ -z "${DATA_HANDLERS[${t}]:-}" ]]; then
+			log4Bash 'ERROR' "${LINENO}" "${FUNCNAME:-main}" '1' "Unknown datatype '${t}'"
+			exit 1
+		fi
+		ENABLED_TYPES["${t}"]=true
+	done
 fi
 
 # loop over DATATYPE_ORDER, that need to be processed, and skip when false.
